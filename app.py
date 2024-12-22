@@ -87,34 +87,42 @@ if (role == 'human') and _is_vision:
                 st.image(image)
             image_base64 = f"data:image/png;base64,{convert_to_base64(Image.open(image))}"
 
-if prompt := st.chat_input("Your message"):
-    # Display input message in chat message container
-    with st.chat_message(role):
-        st.markdown(prompt)
-    # Add input message to chat history
-    if (role == 'human') and _is_vision and image_base64:
-        st.session_state.messages.append({"role": role, "content": [
-            {
-                "type": "image_url",
-                "image_url": image_base64,
-            },
-            {"type": "text", "text": prompt},
-        ]})
-    else:
-        st.session_state.messages.append({"role": role, "content": prompt})
-
-    # LLM response
-    if role == "human":
+chat_area = st.container()
+def gen_res():
+    with chat_area:
         with st.chat_message("assistant"):
             llm = _load_llm(model_name, temperature, top_k, top_p)
             response = st.write_stream(llm.stream(st.session_state.messages))
         # Add assistant response to chat history
         st.session_state.messages.append({"role": "assistant", "content": response})
-        st.rerun()
-  
+
+if prompt := st.chat_input("Your message"):
+    with chat_area:
+        # Display input message in chat message container
+        with st.chat_message(role):
+            st.markdown(prompt)
+        # Add input message to chat history
+        if (role == 'human') and _is_vision and image_base64:
+            st.session_state.messages.append({"role": role, "content": [
+                {
+                    "type": "image_url",
+                    "image_url": image_base64,
+                },
+                {"type": "text", "text": prompt},
+            ]})
+        else:
+            st.session_state.messages.append({"role": role, "content": prompt})
+
+    # LLM response
+    if role == "human":
+        gen_res()
+    st.rerun()
+
+
 with st.sidebar:
     btn_col1, btn_col2 = st.columns(2)
     with btn_col1:
         st.button("Rewind", on_click=rewind, use_container_width=True, type='primary')
     with btn_col2:
         st.button("Clear", on_click=clear, use_container_width=True)
+    st.button("Generate", on_click=gen_res, use_container_width=True)
