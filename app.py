@@ -2,6 +2,7 @@ import streamlit as st
 import re
 import base64
 from io import BytesIO
+import requests
 from PIL import Image
 from langchain_ollama import ChatOllama
 
@@ -71,23 +72,31 @@ for message in st.session_state.messages:
                     st.markdown(content["text"])
 
 _is_vision = (model_name.split(':')[0].split('-')[-1] == "vision")
-if _is_vision:
-    image = st.file_uploader("Upload an image", type=["jpg","png","jpeg"], key=f"img_{len(st.session_state.messages)}")
-    if image:
-        with st.chat_message(role):
-            st.image(image)
-        image_url = f"data:image/jpeg;base64,{convert_to_base64(Image.open(image))}"
+if (role == 'human') and _is_vision:
+    image_base64 = None
+    url = st.text_input("Image URL", key=f"url_{len(st.session_state.messages)}")
+    if url:
+        response = requests.get(url)
+        _image = Image.open(BytesIO(response.content))
+        st.image(_image)
+        image_base64 = f"data:image/png;base64,{convert_to_base64(_image)}"
+    else:
+        image = st.file_uploader("Upload an image", type=["jpg","png","jpeg"], key=f"img_{len(st.session_state.messages)}")
+        if image:
+            with st.chat_message(role):
+                st.image(image)
+            image_base64 = f"data:image/png;base64,{convert_to_base64(Image.open(image))}"
 
 if prompt := st.chat_input("Your message"):
     # Display input message in chat message container
     with st.chat_message(role):
         st.markdown(prompt)
     # Add input message to chat history
-    if _is_vision and image:
+    if (role == 'human') and _is_vision and image_base64:
         st.session_state.messages.append({"role": role, "content": [
             {
                 "type": "image_url",
-                "image_url": image_url,
+                "image_url": image_base64,
             },
             {"type": "text", "text": prompt},
         ]})
