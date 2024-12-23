@@ -102,8 +102,7 @@ with st.sidebar:
         else:
             image = st.file_uploader("Upload an image", type=["jpg","png","jpeg"], key=f"img_{len(st.session_state.messages)}")
             if image:
-                with st.chat_message(role):
-                    st.image(image)
+                st.image(image)
                 image_base64 = f"data:image/png;base64,{convert_to_base64(Image.open(image))}"
 
 if prompt := st.chat_input("Your message"):
